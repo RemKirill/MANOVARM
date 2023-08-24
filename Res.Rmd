@@ -1,0 +1,217 @@
+---
+title: "Test"
+author: "Redkokosh Kirill"
+date: "12/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r}
+source("/Users/bulochka/RProject/НИР/funcsAR_8.R")
+source("/Users/bulochka/RProject/НИР/testARM_FullData.R")
+library(MASS)
+library('pracma')
+```
+
+```{r}
+set.seed(1)
+Group <- TRUE
+eps <- 1/10^5
+data <- read.csv("/Users/bulochka/RProject/НИР/nir_data.csv", header = TRUE, as.is = FALSE, sep = ';')[-1]
+data <- rbind(subset(data, Sex == 0), subset(data, Sex == 1)) #группируем по полу
+data$Sex <- data$Sex + 1
+nrow(subset(data, Sex == 2))
+names(data)[1] <- 'group'
+df1 <- data[,c(1,2,3,4,5)] 
+df1 <- df1[!is.na(df1[,2]), ]
+df2 <- data[,c(1,6,7,8,9)]
+df2 <- df2[!is.na(df2[,2]), ]
+df3 <- data[,c(1,10,11,12,13)]
+df3 <- df3[!is.na(df3[,2]), ]
+AU.2(df1,eps,Group)$P.values[-1]
+AU.2(df2,eps,Group)$P.values[-1]
+AU.2(df3,eps,Group)$P.values[-1]
+```
+
+Применение методов дисперсионного анализа к одному признаку:
+
+Для размера левого предсердия (диастолический, в мм): значимым является только эффект времени.
+
+Для размера левого желудочка (диастолический, в мм): значимыми являются все три эффекта.
+
+Для размера левого желудочка (систолический, в мм): значимым являтся только эффект группы (пол).
+
+Применение методов дисперсионного анализа к двум признакам (Размер левого желудочка диастолический и систолический):
+
+```{r, echo = FALSE}
+y_for2_1 <- function(x){
+  Group<-TRUE
+  eps<-1/10^5
+  n_1 <- x[1]*data$LVd.po.1 + x[2]*data$LVs.po.1
+  n_5 <- x[1]*data$LVd.po5 + x[2]*data$LVs.po5
+  n_9 <- x[1]*data$LVd.po9 + x[2]*data$LVs.po9
+  n_13 <- x[1]*data$LVd.po13 + x[2]*data$LVs.po13
+  new_ind <- data.frame(cbind(data$group, n_1, n_5, n_9, n_13))
+  names(new_ind)[1] <- 'group'
+  new_ind <- new_ind[!is.na(new_ind[,2]), ]
+  AU.2(new_ind,eps,Group, n = 2, nm = 4)$P.values[-1][1]
+}
+
+y_for2_2 <- function(x){
+  Group<-TRUE
+  eps<-1/10^5
+  n_1 <- x[1]*data$LVd.po.1 + x[2]*data$LVs.po.1
+  n_5 <- x[1]*data$LVd.po5 + x[2]*data$LVs.po5
+  n_9 <- x[1]*data$LVd.po9 + x[2]*data$LVs.po9
+  n_13 <- x[1]*data$LVd.po13 + x[2]*data$LVs.po13
+  new_ind <- data.frame(cbind(data$group, n_1, n_5, n_9, n_13))
+  names(new_ind)[1] <- 'group'
+  new_ind <- new_ind[!is.na(new_ind[,2]), ]
+  AU.2(new_ind,eps,Group, n = 2, nm = 4)$P.values[-1][2]
+}
+
+y_for2_3 <- function(x){
+  Group<-TRUE
+  eps<-1/10^5
+  n_1 <- x[1]*data$LVd.po.1 + x[2]*data$LVs.po.1
+  n_5 <- x[1]*data$LVd.po5 + x[2]*data$LVs.po5
+  n_9 <- x[1]*data$LVd.po9 + x[2]*data$LVs.po9
+  n_13 <- x[1]*data$LVd.po13 + x[2]*data$LVs.po13
+  new_ind <- data.frame(cbind(data$group, n_1, n_5, n_9, n_13))
+  names(new_ind)[1] <- 'group'
+  new_ind <- new_ind[!is.na(new_ind[,2]), ]
+  AU.2(new_ind,eps,Group, n = 2, nm = 4)$P.values[-1][3]
+}
+```
+
+```{r}
+opt1 <- optim(c(0.5,0.5), y_for2_1)
+opt1$par
+opt1$value
+
+opt2 <- optim(c(1,-0.5), y_for2_2)
+opt2$par
+opt2$value
+
+opt3 <- optim(c(0.5,0.5), y_for2_3)
+opt3$par
+opt3$value
+```
+
+```{r}
+library(dplyr)
+Group<-TRUE
+eps<-1/10^5
+x <- opt3$par
+n_1 <- x[1]*data$LVd.po.1 + x[2]*data$LVs.po.1
+n_5 <- x[1]*data$LVd.po5 + x[2]*data$LVs.po5
+n_9 <- x[1]*data$LVd.po9 + x[2]*data$LVs.po9
+n_13 <- x[1]*data$LVd.po13 + x[2]*data$LVs.po13
+new_ind <- data.frame(cbind(data$group, n_1, n_5, n_9, n_13))
+names(new_ind)[1] <- 'group'
+new_ind <- new_ind[!is.na(new_ind[,2]), ]
+AU.2(new_ind,eps,Group)$ep$B$Second$Means$XIT
+```
+
+Значимым является эффекты группы ($\alpha = 0.721, \beta = 0.303$).
+
+Применение методов дисперсионного анализа ко всем трем признакам:
+
+```{r}
+y_for2_1 <- function(x, Data, nm, Group, eps){ #x- вектор из optim
+  print(Data)
+  n_1 <- x[1]*data$LVd.po.1 + x[2]*data$LVs.po.1
+  n_5 <- x[1]*data$LVd.po5 + x[2]*data$LVs.po5
+  n_9 <- x[1]*data$LVd.po9 + x[2]*data$LVs.po9
+  n_13 <- x[1]*data$LVd.po13 + x[2]*data$LVs.po13
+  new_ind <- data.frame(cbind(data$group, n_1, n_5, n_9, n_13))
+  names(new_ind)[1] <- 'group'
+  new_ind <- new_ind[!is.na(new_ind[,2]), ]
+  AU.2(new_ind,eps,Group)$P.values[-1][1]
+}
+```
+
+```{r}
+bind_data <- function(x, Data, n, nm, pp, Group, eps){ #x- вектор из optim
+  new_ind <- data.frame(data[, 1])
+  names(new_ind)[1] <- 'group'
+  for(i in 1:nm){
+    t <- 0
+    for(j in 1:n){
+      t <- t + x[j]*data[,2+(i-1)+(j-1)*nm] #линейная комбинация в i момент времени из j признаков
+    }
+    new_ind <- data.frame(cbind(new_ind, t))
+  }
+  new_ind <- new_ind[!is.na(new_ind[,2]), ] #первый столбец должен быть без NA
+  AU.2(new_ind,eps,Group)$P.values[-1][pp]
+}
+optim_data <- function(Data, n, nm, pp = 3, Group = TRUE, eps = 1/10^5){ #n- количество рассматриваемых признаков, Data- данные, которые мы разбиваем, nm- количество моментов времени, pp = {1, 2, 3}- какой эффект проверяем; требования-- первый столбец- переменная group (начинается с 1), потом блок всех признаков в 1 момент времени, во 2, ..., в nm момент 
+  opt <- optim(runif(n, min = -1, max = 1), bind_data, Data = Data, n = n, nm = nm, pp = pp, Group = Group, eps = eps)
+  opt
+}
+opt <- optim_data(Data = data, n = 3, nm = 4)
+opt$par
+opt$value
+```
+
+```{r, echo = FALSE}
+y_for3_1 <- function(x){
+  Group<-TRUE
+  eps<-1/10^5
+  n_1 <- x[1]*data$Lad.po.1 + x[2]*data$LVd.po.1 + x[3]*data$LVs.po.1
+  n_5 <- x[1]*data$Lad.po5 + x[2]*data$LVd.po5 + x[3]*data$LVs.po5
+  n_9 <- x[1]*data$Lad.po9 + x[2]*data$LVd.po9 + x[3]*data$LVs.po9
+  n_13 <- x[1]*data$Lad.po13 + x[2]*data$LVd.po13 + x[3]*data$LVs.po13
+  new_ind <- data.frame(cbind(data$group, n_1, n_5, n_9, n_13))
+  names(new_ind)[1] <- 'group'
+  new_ind <- new_ind[!is.na(new_ind[,2]), ]
+  AU.2(new_ind,eps,Group, n = 3, nm = 4)$P.values[-1][1]
+}
+
+y_for3_2 <- function(x){
+  Group<-TRUE
+  eps<-1/10^5
+  n_1 <- x[1]*data$Lad.po.1 + x[2]*data$LVd.po.1 + x[3]*data$LVs.po.1
+  n_5 <- x[1]*data$Lad.po5 + x[2]*data$LVd.po5 + x[3]*data$LVs.po5
+  n_9 <- x[1]*data$Lad.po9 + x[2]*data$LVd.po9 + x[3]*data$LVs.po9
+  n_13 <- x[1]*data$Lad.po13 + x[2]*data$LVd.po13 + x[3]*data$LVs.po13
+  new_ind <- data.frame(cbind(data$group, n_1, n_5, n_9, n_13))
+  names(new_ind)[1] <- 'group'
+  new_ind <- new_ind[!is.na(new_ind[,2]), ]
+  AU.2(new_ind,eps,Group, n = 3, nm = 4)$P.values[-1][2]
+}
+
+y_for3_3 <- function(x){
+  Group<-TRUE
+  eps<-1/10^5
+  n_1 <- x[1]*data$Lad.po.1 + x[2]*data$LVd.po.1 + x[3]*data$LVs.po.1
+  n_5 <- x[1]*data$Lad.po5 + x[2]*data$LVd.po5 + x[3]*data$LVs.po5
+  n_9 <- x[1]*data$Lad.po9 + x[2]*data$LVd.po9 + x[3]*data$LVs.po9
+  n_13 <- x[1]*data$Lad.po13 + x[2]*data$LVd.po13 + x[3]*data$LVs.po13
+  new_ind <- data.frame(cbind(data$group, n_1, n_5, n_9, n_13))
+  names(new_ind)[1] <- 'group'
+  new_ind <- new_ind[!is.na(new_ind[,2]), ]
+  AU.2(new_ind,eps,Group, n = 3, nm = 4)$P.values[-1][3]
+}
+```
+
+```{r}
+opt1 <- optim(c(0.5,0.5,0.3), y_for3_1)
+opt1$par
+opt1$value
+
+opt2 <- optim(c(1,-0.5,0.3), y_for3_2)
+opt2$par
+opt2$value
+
+opt3 <- optim(c(0.5,0.5,0.3), y_for3_3)
+opt3$par
+opt3$value
+```
+
+Значимыми являются эффекты группы ($a_1=-0.312, a_2=0.933, a_3=0.563$) и времени ($a_1=1.141, a_2=-0.635, a_3=0.024$).
+
+Во всех 3 рассмотренных случаях данные почти всегда различаются по группам (что вполне закономерно, так как данные группировались по полу), немного реже по времени, а вот эффект взаимодействия незначимый почти во всех случаях. 
